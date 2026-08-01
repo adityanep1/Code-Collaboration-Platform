@@ -3,7 +3,7 @@ const cors = require("cors");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
-
+const roomRoutes = require("./routes/roomRoutes");
 const app = express();
 
 // Middleware
@@ -26,5 +26,6 @@ app.post("/test", (req, res) => {
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/rooms", roomRoutes);
 
 module.exports = app;
