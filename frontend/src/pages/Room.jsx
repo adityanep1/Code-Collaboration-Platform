@@ -1,14 +1,27 @@
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import CodeEditor from "../components/Editor";
+import socket from "../socket/socket";
 
 const Room = () => {
 
   const { roomCode } = useParams();
 
-  return (
-    <div style={{ padding: "30px" }}>
-      <h1>Room Page</h1>
+  useEffect(() => {
 
-      <h2>Room Code: {roomCode}</h2>
+    socket.emit("join-room", roomCode);
+
+    console.log("Joined Room:", roomCode);
+
+  }, [roomCode]);
+
+  return (
+    <div>
+      <h2 style={{ padding: "20px" }}>
+        Room Code: {roomCode}
+      </h2>
+
+      <CodeEditor />
     </div>
   );
 };

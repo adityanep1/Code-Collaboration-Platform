@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const codeRoutes = require("./routes/codeRoutes");
 
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -27,5 +28,6 @@ app.post("/test", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/code", codeRoutes);
 
 module.exports = app;
