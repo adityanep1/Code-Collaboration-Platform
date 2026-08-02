@@ -7,6 +7,7 @@ const {
   createRoom,
   joinRoom,
   getRoom,
+  saveCode,
 } = require("../controllers/roomController");
 
 // Create Room
@@ -17,5 +18,8 @@ router.post("/join", protect, joinRoom);
 
 // Get Room Details
 router.get("/:roomCode", protect, getRoom);
+
+// Save Code
+router.post("/save",protect,saveCode);
 
 module.exports = router;

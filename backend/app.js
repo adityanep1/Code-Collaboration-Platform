@@ -1,11 +1,14 @@
 const express = require("express");
 const cors = require("cors");
-const codeRoutes = require("./routes/codeRoutes");
 
+const app = express();
+
+// Routes
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const roomRoutes = require("./routes/roomRoutes");
-const app = express();
+const codeRoutes = require("./routes/codeRoutes");
+const executionRoutes = require("./routes/executionRoutes");
 
 // Middleware
 app.use(cors());
@@ -16,7 +19,6 @@ app.get("/", (req, res) => {
   res.send("Backend is running...");
 });
 
-// Test POST Route
 app.post("/test", (req, res) => {
   res.json({
     success: true,
@@ -24,10 +26,11 @@ app.post("/test", (req, res) => {
   });
 });
 
-// Routes
+// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/rooms", roomRoutes);
 app.use("/api/code", codeRoutes);
+app.use("/api/executions", executionRoutes);
 
 module.exports = app;

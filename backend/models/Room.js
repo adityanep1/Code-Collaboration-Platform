@@ -14,6 +14,11 @@ const roomSchema = new mongoose.Schema(
       unique: true,
     },
 
+    code:{
+    type:String,
+    default:"// Start coding here..."
+},
+
     language: {
       type: String,
       default: "javascript",

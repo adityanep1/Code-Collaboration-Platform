@@ -121,8 +121,49 @@ const getRoom = async (req, res) => {
   }
 };
 
+const saveCode = async (req,res)=>{
+
+    try{
+
+        const {roomCode,code}=req.body;
+
+        const room=await Room.findOneAndUpdate(
+
+            {roomCode},
+
+            {code},
+
+            {new:true}
+
+        );
+
+        res.json({
+
+            success:true,
+
+            room
+
+        });
+
+    }
+
+    catch(error){
+
+        res.status(500).json({
+
+            success:false,
+
+            message:error.message
+
+        });
+
+    }
+
+}
+
 module.exports = {
   createRoom,
   joinRoom,
   getRoom,
+  saveCode,
 };

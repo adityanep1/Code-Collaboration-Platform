@@ -8,7 +8,7 @@ const connectDB = require("./config/db");
 
 const PORT = process.env.PORT || 5000;
 
-// Connect Database
+// Connect MongoDB
 connectDB();
 
 // Create HTTP Server
@@ -22,30 +22,8 @@ const io = new Server(server, {
   },
 });
 
-// Socket Connection
-io.on("connection", (socket) => {
-
-  console.log("🟢 User Connected:", socket.id);
-
-  socket.on("join-room", (roomCode) => {
-
-    socket.join(roomCode);
-
-    console.log(`${socket.id} joined room ${roomCode}`);
-
-  });
-
-  socket.on("code-change", ({ roomCode, code }) => {
-
-    socket.to(roomCode).emit("receive-code", code);
-
-  });
-
-  socket.on("disconnect", () => {
-    console.log("🔴 User Disconnected:", socket.id);
-  });
-
-});
+// Load Socket Logic
+require("./sockets/socket")(io);
 
 // Start Server
 server.listen(PORT, () => {
