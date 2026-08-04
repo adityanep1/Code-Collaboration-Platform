@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import socket from "../socket/socket";
+import FileItem from "./FileItem";
+import FolderItem from "./FolderItem";
 
 import {
   createFileAPI,
@@ -18,6 +20,7 @@ const FileExplorer = ({
   const { roomCode } = useParams();
 
   const [files, setFiles] = useState([]);
+  const [selectedFolder, setSelectedFolder] = useState(null);
 
   // ==========================
   // Load Files
@@ -59,35 +62,68 @@ const FileExplorer = ({
 
   }, []);
 
-  // ==========================
-  // Create File
-  // ==========================
-  const createFile = async () => {
+// ==========================
+// Create File
+// ==========================
+const createFile = async () => {
 
-    const fileName = prompt("Enter File Name");
+  const fileName = prompt("Enter File Name");
 
-    if (!fileName) return;
+  if (!fileName) return;
 
-    try {
+  try {
 
-      await createFileAPI({
-        roomCode,
-        fileName,
-      });
+    await createFileAPI({
+      roomCode,
+      fileName,
+      type: "file",
+      parentId: selectedFolder,
+    });
 
-      socket.emit("file-created", {
-        roomCode,
-      });
+    socket.emit("file-created", {
+      roomCode,
+    });
 
-      loadFiles();
+    loadFiles();
 
-    } catch (error) {
+  } catch (error) {
 
-      console.log(error);
+    console.log(error);
 
-    }
-  };
+  }
 
+};
+
+// ==========================
+// Create Folder
+// ==========================
+const createFolder = async () => {
+
+  const folderName = prompt("Enter Folder Name");
+
+  if (!folderName) return;
+
+  try {
+
+    await createFileAPI({
+      roomCode,
+      fileName: folderName,
+      type: "folder",
+    });
+
+    socket.emit("file-created", {
+      roomCode,
+    });
+
+    loadFiles();
+
+  } catch (error) {
+
+    console.log(error);
+
+  }
+
+};
   // ==========================
   // Rename File
   // ==========================
@@ -164,12 +200,23 @@ const deleteFile = async (file) => {
           📁 Files
         </h2>
 
-        <button
-          onClick={createFile}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-        >
-          +
-        </button>
+        <div className="flex gap-2">
+
+  <button
+    onClick={createFile}
+    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+  >
+    📄
+  </button>
+
+  <button
+    onClick={createFolder}
+    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+  >
+    📁
+  </button>
+
+</div>
 
       </div>
 
@@ -182,57 +229,55 @@ const deleteFile = async (file) => {
 
       ) : (
 
-        files.map((file) => (
+      <>
+  {/* Root Files */}
 
-          <div
-            key={file._id}
-            className={`flex justify-between items-center p-2 mb-2 rounded-lg border ${
-              selectedFileId === file._id
-                ? "bg-blue-100 border-blue-500"
-                : "hover:bg-gray-100"
-            }`}
-          >
+  {files
+    .filter(
+      (file) =>
+        file.type === "file" &&
+        !file.parentId
+    )
+    .map((file) => (
 
-            <div
-              className="flex-1 cursor-pointer"
-             onClick={() => {
+      <FileItem
+        key={file._id}
+        file={file}
+        selectedFileId={selectedFileId}
+        openTabs={openTabs}
+        setOpenTabs={setOpenTabs}
+        setSelectedFileId={setSelectedFileId}
+        setSelectedFolder={setSelectedFolder}
+        renameFile={renameFile}
+        deleteFile={deleteFile}
+      />
 
-  setSelectedFileId(file._id);
+    ))}
 
-  const exists = openTabs.find(
-    (tab) => tab._id === file._id
-  );
+  {/* Folders */}
 
-  if (!exists) {
-    setOpenTabs([...openTabs, file]);
-  }
+  {files
+    .filter(
+      (file) =>
+        file.type === "folder"
+    )
+    .map((folder) => (
 
-}}
-            >
-              📄 {file.fileName}
-            </div>
+      <FolderItem
+        key={folder._id}
+        folder={folder}
+        files={files}
+        selectedFileId={selectedFileId}
+        openTabs={openTabs}
+        setOpenTabs={setOpenTabs}
+        setSelectedFileId={setSelectedFileId}
+        setSelectedFolder={setSelectedFolder}
+        renameFile={renameFile}
+        deleteFile={deleteFile}
+      />
 
-            <div className="flex gap-2">
-
-  <button
-    onClick={() => renameFile(file)}
-    className="text-blue-600 hover:text-blue-800"
-  >
-    ✏
-  </button>
-
-  <button
-    onClick={() => deleteFile(file)}
-    className="text-red-600 hover:text-red-800"
-  >
-    🗑
-  </button>
-
-</div>
-
-          </div>
-
-        ))
+    ))}
+</>
 
       )}
 

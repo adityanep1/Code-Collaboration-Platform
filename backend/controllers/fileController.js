@@ -1,25 +1,41 @@
 const File = require("../models/File");
 
 // =====================
-// Create File
+// Create File / Folder
 // =====================
 const createFile = async (req, res) => {
   try {
-    const file = await File.create(req.body);
+
+    const file = await File.create({
+      roomCode: req.body.roomCode,
+      fileName: req.body.fileName,
+
+      type: req.body.type || "file",
+
+      parentId: req.body.parentId || null,
+
+      language: req.body.language || "javascript",
+
+      code: req.body.code || "",
+    });
 
     res.status(201).json({
       success: true,
       file,
     });
+
   } catch (error) {
+
     console.log(error);
 
     res.status(500).json({
       success: false,
-      message: "Unable to create file",
+      message: "Unable to create item",
     });
+
   }
 };
+
 
 // =====================
 // Get All Files of Room
