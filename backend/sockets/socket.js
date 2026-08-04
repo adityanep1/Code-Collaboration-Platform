@@ -51,6 +51,13 @@ module.exports = (io) => {
     });
 
     // ===========================
+// File Created
+// ===========================
+socket.on("file-created", ({ roomCode }) => {
+  socket.to(roomCode).emit("refresh-files");
+});
+
+    // ===========================
 // Typing Indicator
 // ===========================
 socket.on("typing", ({ roomCode, userName }) => {

@@ -2,12 +2,21 @@ import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useParams } from "react-router-dom";
 import socket from "../socket/socket";
+import {
+  updateFileAPI,
+  getFileAPI,
+} from "../services/fileService";
 
 import { runCodeAPI } from "../services/codeService";
 import { saveCodeAPI, getRoomAPI } from "../services/roomService";
 import { saveExecutionAPI } from "../services/executionService";
 
-const CodeEditor = () => {
+const CodeEditor = ({
+  selectedFileId,
+  openTabs,
+  setOpenTabs,
+  setSelectedFileId,
+}) => {
   const { roomCode } = useParams();
 
   const [language, setLanguage] = useState("javascript");
@@ -51,41 +60,90 @@ const CodeEditor = () => {
     };
   }, []);
 
-  // ==========================
-  // Auto Save
-  // ==========================
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        await saveCodeAPI(roomCode, code);
-        console.log("✅ Auto Saved");
-      } catch (error) {
-        console.log(error);
+// ==========================
+// Auto Save
+// ==========================
+useEffect(() => {
+  const timer = setTimeout(async () => {
+    try {
+
+      if (selectedFileId) {
+
+  await updateFileAPI(selectedFileId, {
+    code,
+    language,
+  });
+
+} else {
+
+  await saveCodeAPI(roomCode, code);
+
+}
+
+      console.log("✅ Auto Saved");
+
+    } catch (error) {
+      console.log(error);
+    }
+  }, 2000);
+
+  return () => clearTimeout(timer);
+
+}, [code, roomCode, selectedFileId, language]);
+
+// ==========================
+// Load Room Code (only once)
+// ==========================
+useEffect(() => {
+  const loadCode = async () => {
+    try {
+      const result = await getRoomAPI(roomCode);
+
+      if (result.room.code) {
+        setCode(result.room.code);
       }
-    }, 2000);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-    return () => clearTimeout(timer);
-  }, [code, roomCode]);
-
-  // ==========================
-  // Load Previous Code
-  // ==========================
-  useEffect(() => {
-    const loadCode = async () => {
-      try {
-        const result = await getRoomAPI(roomCode);
-
-        if (result.room.code) {
-          setCode(result.room.code);
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
+  // Only load room code when NO file is selected
+  if (!selectedFileId) {
     loadCode();
-  }, [roomCode]);
+  }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [roomCode]);
+
+// ==========================
+// Load Selected File
+// ==========================
+useEffect(() => {
+
+  const loadSelectedFile = async () => {
+
+    if (!selectedFileId) return;
+
+    try {
+
+      const result = await getFileAPI(selectedFileId);
+
+      console.log("Loaded File:", result.file);
+
+      setCode(result.file.code || "");
+      setLanguage(result.file.language || "javascript");
+
+    } catch (error) {
+
+      console.log(error);
+
+    }
+
+  };
+
+  loadSelectedFile();
+
+}, [selectedFileId]);
   // ==========================
   // Run Code
   // ==========================
@@ -124,7 +182,82 @@ const CodeEditor = () => {
     }
   };
 
-  return (
+
+
+
+
+
+  return(
+  <div>
+
+    {/* ==========================
+        VS Code Tabs
+    ========================== */}
+
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        overflowX: "auto",
+        background: "#1e1e1e",
+        color: "white",
+        borderBottom: "1px solid #444",
+      }}
+    >
+      {openTabs.map((tab) => (
+
+  <div
+    key={tab._id}
+    onClick={() => setSelectedFileId(tab._id)}
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      padding: "10px 15px",
+      cursor: "pointer",
+      background:
+        selectedFileId === tab._id
+          ? "#2d2d2d"
+          : "#1e1e1e",
+      borderRight: "1px solid #444",
+    }}
+  >
+    <span>📄 {tab.fileName}</span>
+
+    <span
+      onClick={(e) => {
+        e.stopPropagation();
+
+        const updatedTabs = openTabs.filter(
+          (item) => item._id !== tab._id
+        );
+
+        setOpenTabs(updatedTabs);
+
+        if (selectedFileId === tab._id) {
+          if (updatedTabs.length > 0) {
+            setSelectedFileId(updatedTabs[0]._id);
+          } else {
+            setSelectedFileId(null);
+          }
+        }
+      }}
+      style={{
+        color: "#ff6b6b",
+        fontWeight: "bold",
+        cursor: "pointer",
+      }}
+    >
+      ✕
+    </span>
+  </div>
+
+))}
+    </div>
+
+    {/* Top Bar */}
+
+
     <div>
       {/* Top Bar */}
       <div
@@ -166,7 +299,7 @@ const CodeEditor = () => {
       />
 
       {/* Output */}
-      <div
+           <div
         style={{
           padding: "20px",
           borderTop: "1px solid #ccc",
@@ -177,8 +310,12 @@ const CodeEditor = () => {
 
         <pre>{output}</pre>
       </div>
+
     </div>
-  );
+
+  </div>
+
+);
 };
 
 export default CodeEditor;

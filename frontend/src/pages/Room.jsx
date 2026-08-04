@@ -9,11 +9,13 @@ import Sidebar from "../components/layout/Sidebar";
 
 import socket from "../socket/socket";
 import ExecutionHistory from "../components/ExecutionHistory";
-
+import FileExplorer from "../components/FileExplorer";
 
 const Room = () => {
   const { roomCode } = useParams();
 
+  const [selectedFileId, setSelectedFileId] = useState(null);
+  const [openTabs, setOpenTabs] = useState([]);
   const [users, setUsers] = useState([]);
   const [typingUser, setTypingUser] = useState("");
 
@@ -74,10 +76,19 @@ const Room = () => {
       {/* Main Layout */}
       <div className="grid grid-cols-12 h-[calc(100vh-80px)]">
 
-        {/* Sidebar */}
-        <div className="col-span-2">
-          <Sidebar users={users} />
-        </div>
+       {/* Sidebar */}
+<div className="col-span-2 flex flex-col gap-4">
+
+  <Sidebar users={users} />
+
+<FileExplorer
+  selectedFileId={selectedFileId}
+  setSelectedFileId={setSelectedFileId}
+  openTabs={openTabs}
+  setOpenTabs={setOpenTabs}
+/>
+
+</div>
 
         {/* Main Content */}
        <div className="col-span-10 bg-gray-100 p-5 overflow-auto">
@@ -89,7 +100,12 @@ const Room = () => {
 
               <div className="bg-white rounded-xl shadow-lg p-4 h-full">
 
-                <CodeEditor />
+ <CodeEditor
+  selectedFileId={selectedFileId}
+  openTabs={openTabs}
+  setOpenTabs={setOpenTabs}
+  setSelectedFileId={setSelectedFileId}
+/>
                 <ExecutionHistory />
 
               </div>
