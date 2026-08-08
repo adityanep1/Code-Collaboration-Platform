@@ -7,20 +7,17 @@ const fileSchema = new mongoose.Schema(
       required: true,
     },
 
-    // File or Folder Name
     fileName: {
       type: String,
       required: true,
     },
 
-    // File or Folder
     type: {
       type: String,
       enum: ["file", "folder"],
       default: "file",
     },
 
-    // Parent Folder
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "File",
@@ -35,6 +32,21 @@ const fileSchema = new mongoose.Schema(
     code: {
       type: String,
       default: "",
+    },
+
+    path: {
+      type: String,
+      default: "",
+    },
+
+    extension: {
+      type: String,
+      default: "",
+    },
+
+    size: {
+      type: Number,
+      default: 0,
     },
   },
   {

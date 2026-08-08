@@ -1,46 +1,136 @@
-import { FaCircle, FaPlay } from "react-icons/fa";
+import {
+  FaCircle,
+  FaPlay,
+  FaUsers,
+} from "react-icons/fa";
 
-const Sidebar = ({ users }) => {
-
+const Sidebar = ({ users = [] }) => {
   return (
-    <div className="bg-slate-900 text-white h-full p-5">
+    <div className="w-full">
 
-      <h2 className="text-xl font-bold mb-6">
+      {/* ================================
+          HEADER
+      ================================= */}
 
-        👥 Members
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-center gap-2">
+          <FaUsers className="text-indigo-500 text-sm" />
 
-      </h2>
+          <h2 className="text-base font-semibold text-slate-800">
+            Members
+          </h2>
 
-      <div className="space-y-3">
+          <span className="ml-auto text-xs font-medium text-slate-400">
+            {users.length}
+          </span>
+        </div>
+      </div>
 
-        {users.map((user) => (
+      {/* ================================
+          MEMBERS
+      ================================= */}
 
-          <div
-            key={user.socketId}
-            className="flex items-center gap-3"
-          >
+      <div className="px-4 pb-3">
 
-            <FaCircle className="text-green-500 text-xs" />
+        {users.length === 0 ? (
+          <div className="py-2 text-sm text-slate-400">
+            No members online
+          </div>
+        ) : (
+          <div className="space-y-1">
 
-            {user.name}
+            {users.map((user) => (
+              <div
+                key={user.socketId}
+                className="
+                  flex
+                  items-center
+                  gap-2.5
+                  min-w-0
+                  px-2.5
+                  py-2
+                  rounded-lg
+                  hover:bg-slate-50
+                  transition-colors
+                "
+              >
+
+                {/* Online indicator */}
+
+                <FaCircle
+                  className="
+                    shrink-0
+                    text-green-500
+                    text-[8px]
+                  "
+                />
+
+                {/* User name */}
+
+                <span
+                  className="
+                    min-w-0
+                    truncate
+                    text-sm
+                    font-medium
+                    text-slate-700
+                  "
+                  title={user.name}
+                >
+                  {user.name}
+                </span>
+
+                <span className="ml-auto text-[10px] text-green-500">
+                  Online
+                </span>
+
+              </div>
+            ))}
 
           </div>
-
-        ))}
+        )}
 
       </div>
 
-      <hr className="my-8" />
+      {/* ================================
+          DIVIDER
+      ================================= */}
 
-      <button
-        className="bg-green-600 w-full py-3 rounded-lg flex justify-center items-center gap-2"
-      >
+      <div className="mx-4 border-t border-slate-200" />
 
-        <FaPlay />
+      {/* ================================
+          RUN CODE
+      ================================= */}
 
-        Run Code
+      <div className="p-4">
 
-      </button>
+        <button
+          type="button"
+          className="
+            w-full
+            h-10
+            flex
+            items-center
+            justify-center
+            gap-2
+            rounded-lg
+            bg-green-600
+            hover:bg-green-700
+            active:bg-green-800
+            text-white
+            text-sm
+            font-medium
+            transition-colors
+          "
+        >
+          <FaPlay className="text-xs" />
+
+          <span>
+            Run Code
+          </span>
+        </button>
+
+      </div>
 
     </div>
   );

@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+
 import socket from "../socket/socket";
+
 import FileItem from "./FileItem";
 import FolderItem from "./FolderItem";
+import FileSearch from "./FileSearch";
+
+import { exportProject } from "../utils/exportProject";
 
 import {
   createFileAPI,
@@ -10,6 +15,15 @@ import {
   renameFileAPI,
   deleteFileAPI,
 } from "../services/fileService";
+
+import {
+  FaFile,
+  FaFolder,
+  FaBoxOpen,
+  FaPlus,
+  FaFolderPlus,
+  FaDownload,
+} from "react-icons/fa";
 
 const FileExplorer = ({
   selectedFileId,
@@ -20,116 +34,152 @@ const FileExplorer = ({
   const { roomCode } = useParams();
 
   const [files, setFiles] = useState([]);
-  const [selectedFolder, setSelectedFolder] = useState(null);
 
-  // ==========================
-  // Load Files
-  // ==========================
+  const [selectedFolder, setSelectedFolder] =
+    useState(null);
+
+  // =====================================================
+  // LOAD FILES
+  // =====================================================
+
   const loadFiles = async () => {
     try {
-      const result = await getFilesAPI(roomCode);
+      const result =
+        await getFilesAPI(roomCode);
 
       setFiles(result.files);
 
-      // Auto select first file
+      // Automatically select first file
       if (
         result.files.length > 0 &&
         !selectedFileId
       ) {
-        setSelectedFileId(result.files[0]._id);
+        setSelectedFileId(
+          result.files[0]._id
+        );
       }
-
     } catch (error) {
-      console.log(error);
+      console.error(
+        "Load files error:",
+        error
+      );
     }
   };
 
-  // Initial Load
+  // =====================================================
+  // INITIAL LOAD
+  // =====================================================
+
   useEffect(() => {
     loadFiles();
   }, []);
 
-  // Real-time refresh
+  // =====================================================
+  // REAL-TIME FILE REFRESH
+  // =====================================================
+
   useEffect(() => {
-
-    socket.on("refresh-files", () => {
+    const handleRefreshFiles = () => {
       loadFiles();
-    });
-
-    return () => {
-      socket.off("refresh-files");
     };
 
-  }, []);
+    const handleGitHubImport = () => {
+      loadFiles();
+    };
 
-// ==========================
-// Create File
-// ==========================
-const createFile = async () => {
+    socket.on(
+      "refresh-files",
+      handleRefreshFiles
+    );
 
-  const fileName = prompt("Enter File Name");
+    window.addEventListener(
+      "github-imported",
+      handleGitHubImport
+    );
 
-  if (!fileName) return;
+    return () => {
+      socket.off(
+        "refresh-files",
+        handleRefreshFiles
+      );
 
-  try {
+      window.removeEventListener(
+        "github-imported",
+        handleGitHubImport
+      );
+    };
+  }, [roomCode]);
 
-    await createFileAPI({
-      roomCode,
-      fileName,
-      type: "file",
-      parentId: selectedFolder,
-    });
+  // =====================================================
+  // CREATE FILE
+  // =====================================================
 
-    socket.emit("file-created", {
-      roomCode,
-    });
+  const createFile = async () => {
+    const fileName = window.prompt(
+      "Enter File Name"
+    );
 
-    loadFiles();
+    if (!fileName) return;
 
-  } catch (error) {
+    try {
+      await createFileAPI({
+        roomCode,
+        fileName,
+        type: "file",
+        parentId: selectedFolder,
+      });
 
-    console.log(error);
+      socket.emit("file-created", {
+        roomCode,
+      });
 
-  }
+      await loadFiles();
+    } catch (error) {
+      console.error(
+        "Create file error:",
+        error
+      );
+    }
+  };
 
-};
+  // =====================================================
+  // CREATE FOLDER
+  // =====================================================
 
-// ==========================
-// Create Folder
-// ==========================
-const createFolder = async () => {
+  const createFolder = async () => {
+    const folderName = window.prompt(
+      "Enter Folder Name"
+    );
 
-  const folderName = prompt("Enter Folder Name");
+    if (!folderName) return;
 
-  if (!folderName) return;
+    try {
+      await createFileAPI({
+        roomCode,
+        fileName: folderName,
+        type: "folder",
+        parentId: selectedFolder,
+      });
 
-  try {
+      socket.emit("file-created", {
+        roomCode,
+      });
 
-    await createFileAPI({
-      roomCode,
-      fileName: folderName,
-      type: "folder",
-    });
+      await loadFiles();
+    } catch (error) {
+      console.error(
+        "Create folder error:",
+        error
+      );
+    }
+  };
 
-    socket.emit("file-created", {
-      roomCode,
-    });
+  // =====================================================
+  // RENAME
+  // =====================================================
 
-    loadFiles();
-
-  } catch (error) {
-
-    console.log(error);
-
-  }
-
-};
-  // ==========================
-  // Rename File
-  // ==========================
   const renameFile = async (file) => {
-
-    const newName = prompt(
+    const newName = window.prompt(
       "Enter New File Name",
       file.fileName
     );
@@ -137,149 +187,288 @@ const createFolder = async () => {
     if (!newName) return;
 
     try {
-
       await renameFileAPI(
         file._id,
         newName
       );
 
-      loadFiles();
+      await loadFiles();
+
+      socket.emit("file-created", {
+        roomCode,
+      });
+    } catch (error) {
+      console.error(
+        "Rename error:",
+        error
+      );
+    }
+  };
+
+  // =====================================================
+  // DELETE
+  // =====================================================
+
+  const deleteFile = async (file) => {
+    const confirmDelete =
+      window.confirm(
+        `Delete "${file.fileName}"?`
+      );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteFileAPI(
+        file._id
+      );
+
+      await loadFiles();
 
       socket.emit("file-created", {
         roomCode,
       });
 
+      if (
+        selectedFileId === file._id
+      ) {
+        setSelectedFileId(null);
+      }
     } catch (error) {
-
-      console.log(error);
-
+      console.error(
+        "Delete error:",
+        error
+      );
     }
-
   };
-  // ==========================
-// Delete File
-// ==========================
-const deleteFile = async (file) => {
 
-  const confirmDelete = window.confirm(
-    `Delete "${file.fileName}"?`
+  // =====================================================
+  // FILE COUNTS
+  // =====================================================
+
+  const rootFiles = files.filter(
+    (file) =>
+      file.type === "file" &&
+      !file.parentId
   );
 
-  if (!confirmDelete) return;
+  const folders = files.filter(
+    (file) =>
+      file.type === "folder"
+  );
 
-  try {
-
-    await deleteFileAPI(file._id);
-
-    loadFiles();
-
-    socket.emit("file-created", {
-      roomCode,
-    });
-
-    // Clear editor if deleted file was open
-    if (selectedFileId === file._id) {
-      setSelectedFileId(null);
-    }
-
-  } catch (error) {
-
-    console.log(error);
-
-  }
-
-};
+  // =====================================================
+  // UI
+  // =====================================================
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-4 mt-5">
+    <div className="w-full">
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      {/* ================================================
+          SEARCH
+      ================================================= */}
 
-        <h2 className="text-xl font-bold">
-          📁 Files
-        </h2>
+      <div className="mb-3">
+        <FileSearch
+          files={files}
+          setSelectedFileId={
+            setSelectedFileId
+          }
+          openTabs={openTabs}
+          setOpenTabs={setOpenTabs}
+        />
+      </div>
 
-        <div className="flex gap-2">
+      {/* ================================================
+          HEADER
+      ================================================= */}
 
-  <button
-    onClick={createFile}
-    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-  >
-    📄
-  </button>
+      <div className="flex items-center justify-between gap-2 mb-3">
 
-  <button
-    onClick={createFolder}
-    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-  >
-    📁
-  </button>
+        <div className="flex items-center gap-2 min-w-0">
 
-</div>
+          <FaFolder
+            className="
+              shrink-0
+              text-amber-500
+              text-sm
+            "
+          />
+
+          <h2 className="
+            truncate
+            text-base
+            font-semibold
+            text-slate-800
+          ">
+            Files
+          </h2>
+
+          <span className="
+            text-xs
+            text-slate-400
+          ">
+            {files.length}
+          </span>
+
+        </div>
+
+        {/* ACTIONS */}
+
+        <div className="
+          flex
+          items-center
+          gap-1
+          shrink-0
+        ">
+
+          {/* New File */}
+
+          <button
+            type="button"
+            onClick={createFile}
+            className="
+              w-8
+              h-8
+              flex
+              items-center
+              justify-center
+              rounded-lg
+              bg-blue-600
+              hover:bg-blue-700
+              text-white
+              transition-colors
+            "
+            title="New file"
+          >
+            <FaFile className="text-xs" />
+          </button>
+
+          {/* New Folder */}
+
+          <button
+            type="button"
+            onClick={createFolder}
+            className="
+              w-8
+              h-8
+              flex
+              items-center
+              justify-center
+              rounded-lg
+              bg-emerald-600
+              hover:bg-emerald-700
+              text-white
+              transition-colors
+            "
+            title="New folder"
+          >
+            <FaFolderPlus className="text-xs" />
+          </button>
+
+          {/* Export */}
+
+          <button
+            type="button"
+            onClick={() =>
+              exportProject(files)
+            }
+            className="
+              w-8
+              h-8
+              flex
+              items-center
+              justify-center
+              rounded-lg
+              bg-violet-600
+              hover:bg-violet-700
+              text-white
+              transition-colors
+            "
+            title="Export project"
+          >
+            <FaDownload className="text-xs" />
+          </button>
+
+        </div>
 
       </div>
 
-      {/* File List */}
-      {files.length === 0 ? (
+      {/* ================================================
+          FILE LIST
+      ================================================= */}
 
-        <p className="text-gray-500">
-          No files
-        </p>
+      <div className="
+        max-h-[360px]
+        overflow-y-auto
+        pr-1
+        space-y-1
+      ">
 
-      ) : (
+        {/* EMPTY */}
 
-      <>
-  {/* Root Files */}
+        {files.length === 0 && (
+          <div className="
+            py-6
+            text-center
+            text-sm
+            text-slate-400
+          ">
+            <FaBoxOpen
+  className="mx-auto mb-2 text-xl text-slate-300"
+/>
 
-  {files
-    .filter(
-      (file) =>
-        file.type === "file" &&
-        !file.parentId
-    )
-    .map((file) => (
+            <p>
+              No files yet
+            </p>
+          </div>
+        )}
 
-      <FileItem
-        key={file._id}
-        file={file}
-        selectedFileId={selectedFileId}
-        openTabs={openTabs}
-        setOpenTabs={setOpenTabs}
-        setSelectedFileId={setSelectedFileId}
-        setSelectedFolder={setSelectedFolder}
-        renameFile={renameFile}
-        deleteFile={deleteFile}
-      />
+        {/* ROOT FILES */}
 
-    ))}
+        {rootFiles.map((file) => (
+          <FileItem
+            key={file._id}
+            file={file}
+            selectedFileId={
+              selectedFileId
+            }
+            openTabs={openTabs}
+            setOpenTabs={setOpenTabs}
+            setSelectedFileId={
+              setSelectedFileId
+            }
+            setSelectedFolder={
+              setSelectedFolder
+            }
+            renameFile={renameFile}
+            deleteFile={deleteFile}
+          />
+        ))}
 
-  {/* Folders */}
+        {/* FOLDERS */}
 
-  {files
-    .filter(
-      (file) =>
-        file.type === "folder"
-    )
-    .map((folder) => (
+        {folders.map((folder) => (
+          <FolderItem
+            key={folder._id}
+            folder={folder}
+            files={files}
+            selectedFileId={
+              selectedFileId
+            }
+            openTabs={openTabs}
+            setOpenTabs={setOpenTabs}
+            setSelectedFileId={
+              setSelectedFileId
+            }
+            setSelectedFolder={
+              setSelectedFolder
+            }
+            renameFile={renameFile}
+            deleteFile={deleteFile}
+          />
+        ))}
 
-      <FolderItem
-        key={folder._id}
-        folder={folder}
-        files={files}
-        selectedFileId={selectedFileId}
-        openTabs={openTabs}
-        setOpenTabs={setOpenTabs}
-        setSelectedFileId={setSelectedFileId}
-        setSelectedFolder={setSelectedFolder}
-        renameFile={renameFile}
-        deleteFile={deleteFile}
-      />
-
-    ))}
-</>
-
-      )}
+      </div>
 
     </div>
   );

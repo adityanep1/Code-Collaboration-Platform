@@ -27,15 +27,22 @@ export const updateFileAPI = async (id, data) => {
 
 // Rename File
 export const renameFileAPI = async (id, fileName) => {
-  const response = await api.put(`/files/${id}`, {
+  return updateFileAPI(id, {
     fileName,
   });
-
-  return response.data;
 };
 
 // Delete File
 export const deleteFileAPI = async (id) => {
   const response = await api.delete(`/files/${id}`);
+  return response.data;
+};
+
+// Move File / Folder
+export const moveFileAPI = async (id, parentId) => {
+  const response = await api.put(`/files/move/${id}`, {
+    parentId,
+  });
+
   return response.data;
 };

@@ -36,6 +36,60 @@ const createFile = async (req, res) => {
   }
 };
 
+// =====================
+// Import Project
+// =====================
+const importProject = async (req, res) => {
+  try {
+
+    const { roomCode, files } = req.body;
+
+    if (!roomCode || !files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid project data",
+      });
+    }
+
+    const documents = files.map((file) => ({
+
+      roomCode,
+
+      fileName: file.fileName,
+
+      path: file.path,
+
+      extension: file.extension,
+
+      size: file.size,
+
+      code: file.code,
+
+      type: "file",
+
+      language: file.extension,
+
+    }));
+
+    await File.insertMany(documents);
+
+    res.json({
+      success: true,
+      message: "Project Imported Successfully",
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+};
+
 
 // =====================
 // Get All Files of Room
@@ -123,12 +177,63 @@ const updateFile = async (req, res) => {
 };
 
 // =====================
-// Delete File
+// Move File / Folder
 // =====================
-const deleteFile = async (req, res) => {
+const moveFile = async (req, res) => {
   try {
 
-    const file = await File.findByIdAndDelete(req.params.id);
+    const { parentId } = req.body;
+
+    const file = await File.findByIdAndUpdate(
+      req.params.id,
+      {
+        parentId: parentId || null,
+      },
+      {
+        returnDocument: "after",
+      }
+    );
+
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      file,
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+};
+
+
+// =====================
+// Rename File / Folder
+// =====================
+const renameFile = async (req, res) => {
+  try {
+
+    const file = await File.findByIdAndUpdate(
+      req.params.id,
+      {
+        fileName: req.body.fileName,
+      },
+      {
+        returnDocument: "after",
+      }
+    );
 
     if (!file) {
       return res.status(404).json({
@@ -139,7 +244,7 @@ const deleteFile = async (req, res) => {
 
     res.json({
       success: true,
-      message: "File deleted successfully",
+      file,
     });
 
   } catch (error) {
@@ -148,17 +253,70 @@ const deleteFile = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: "Unable to delete file",
+      message: "Unable to rename file",
     });
 
   }
 };
 
+
+// =====================
+// Delete File / Folder
+// =====================
+
+const deleteChildren = async (parentId) => {
+  const children = await File.find({ parentId });
+
+  for (const child of children) {
+    if (child.type === "folder") {
+      await deleteChildren(child._id);
+    }
+
+    await File.findByIdAndDelete(child._id);
+  }
+};
+
+const deleteFile = async (req, res) => {
+  try {
+
+    const file = await File.findById(req.params.id);
+
+    if (!file) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found",
+      });
+    }
+
+    if (file.type === "folder") {
+      await deleteChildren(file._id);
+    }
+
+    await File.findByIdAndDelete(file._id);
+
+    res.json({
+      success: true,
+      message: "Deleted successfully",
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to delete",
+    });
+
+  }
+};
 module.exports = {
   createFile,
   getFiles,
   getFile,
   updateFile,
+  moveFile,
   deleteFile,
+  importProject,
 };
 

@@ -18,7 +18,7 @@ const ContextMenu = ({
         color: "white",
         border: "1px solid #444",
         borderRadius: "6px",
-        width: "170px",
+        width: "180px",
         zIndex: 9999,
         boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
       }}
@@ -39,6 +39,8 @@ const ContextMenu = ({
           >
             📁 New Folder
           </div>
+
+          <hr className="border-gray-600" />
         </>
       )}
 

@@ -11,6 +11,7 @@ const protect = async (req, res, next) => {
       req.headers.authorization.startsWith("Bearer")
     ) {
       token = req.headers.authorization.split(" ")[1];
+      console.log("TOKEN:", token);
     }
 
     if (!token) {
@@ -21,9 +22,9 @@ const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+    console.log("DECODED:", decoded);
     req.user = await User.findById(decoded.id).select("-password");
-
+    console.log("USER:", req.user);
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -35,12 +36,14 @@ const protect = async (req, res, next) => {
 
   } catch (error) {
 
-    return res.status(401).json({
-      success: false,
-      message: "Invalid Token"
-    });
+  console.log("JWT ERROR:", error.message);
 
-  }
+  return res.status(401).json({
+    success: false,
+    message: "Invalid Token"
+  });
+
+}
 };
 
 module.exports = protect;

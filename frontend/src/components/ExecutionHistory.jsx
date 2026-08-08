@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import socket from "../socket/socket";
 import { getExecutionHistoryAPI } from "../services/executionService";
 
 const ExecutionHistory = () => {
@@ -7,18 +8,41 @@ const ExecutionHistory = () => {
 
   const [history, setHistory] = useState([]);
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      try {
-        const result = await getExecutionHistoryAPI(roomCode);
-        setHistory(result.history);
-      } catch (error) {
-        console.log(error);
-      }
-    };
+const loadHistory = async () => {
+  try {
+
+    const result = await getExecutionHistoryAPI(roomCode);
+
+    setHistory(result.history);
+
+  } catch (error) {
+
+    console.log(error);
+
+  }
+};
+
+useEffect(() => {
+
+  loadHistory();
+
+}, [roomCode]);
+
+useEffect(() => {
+
+  socket.on("refresh-history", () => {
 
     loadHistory();
-  }, [roomCode]);
+
+  });
+
+  return () => {
+
+    socket.off("refresh-history");
+
+  };
+
+}, []);
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-4 mt-5">

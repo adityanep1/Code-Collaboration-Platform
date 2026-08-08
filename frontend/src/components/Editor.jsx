@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { formatCode } from "../utils/formatter";
+import { useState, useEffect, useRef} from "react";
 import Editor from "@monaco-editor/react";
 import { useParams } from "react-router-dom";
 import socket from "../socket/socket";
@@ -16,13 +17,45 @@ const CodeEditor = ({
   openTabs,
   setOpenTabs,
   setSelectedFileId,
+  onCodeChange,
+  onLanguageChange,
+  onAIInsert,
 }) => {
+
   const { roomCode } = useParams();
 
   const [language, setLanguage] = useState("javascript");
   const [code, setCode] = useState("// Start coding here...");
   const [output, setOutput] = useState("");
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const decorationsRef = useRef([]);
 
+const handleEditorDidMount = (editor, monaco) => {
+
+  editorRef.current = editor;
+  monacoRef.current = monaco;
+
+  if (onAIInsert) {
+    onAIInsert(editor);
+  }
+
+  editor.onDidChangeCursorPosition((e) => {
+
+    const user = JSON.parse(
+      localStorage.getItem("user")
+    );
+
+    socket.emit("cursor-change", {
+      roomCode,
+      userName: user.name,
+      line: e.position.lineNumber,
+      column: e.position.column,
+    });
+
+  });
+
+};
   // ==========================
   // Handle Editor Change
   // ==========================
@@ -30,6 +63,9 @@ const CodeEditor = ({
     const newCode = value || "";
 
     setCode(newCode);
+    if (onCodeChange) {
+  onCodeChange(newCode);
+}
     setOutput("");
 
     const user = JSON.parse(localStorage.getItem("user"));
@@ -147,42 +183,96 @@ useEffect(() => {
   // ==========================
   // Run Code
   // ==========================
-  const runCode = async () => {
-    try {
-      setOutput("Running Code...");
+const runCode = async () => {
+  try {
+    console.log("1️⃣ Run button clicked");
 
-      // Execute code
-      const result = await runCodeAPI(language, code);
+    setOutput("Running Code...");
 
-      console.log("Run Result:", result);
+    const result = await runCodeAPI(language, code);
 
-      setOutput(result.output);
+    console.log("2️⃣ Run API Result:", result);
 
-      const user = JSON.parse(localStorage.getItem("user"));
+    setOutput(result.output);
 
-      console.log("Saving execution...");
+    const user = JSON.parse(localStorage.getItem("user"));
 
-      const saved = await saveExecutionAPI({
-        roomCode,
-        language,
-        code,
-        output: result.output,
-        executedBy: user.name,
-      });
+    const payload = {
+      roomCode,
+      language,
+      code,
+      output: result.output,
+      executedBy: user.name,
+    };
 
-      console.log("✅ Execution Saved");
-      console.log("Saved Response:", saved);
+    console.log("3️⃣ Execution Payload:", payload);
 
-    } catch (error) {
-      console.log("FULL ERROR:", error);
-      console.log("STATUS:", error.response?.status);
-      console.log("DATA:", error.response?.data);
+ const saved = await saveExecutionAPI(payload);
 
-      setOutput("Execution Failed");
-    }
+socket.emit("execution-saved", {
+  roomCode,
+});
+
+console.log("✅ Execution Saved");
+console.log(saved);
+
+  } catch (error) {
+    console.log("❌ ERROR:", error);
+    console.log("STATUS:", error.response?.status);
+    console.log("DATA:", error.response?.data);
+
+    setOutput("Execution Failed");
+  }
+};
+  const handleFormat = async () => {
+
+  const formatted = await formatCode(
+    language,
+    code
+  );
+
+  setCode(formatted);
+
+};
+
+useEffect(() => {
+
+  socket.on("receive-cursor", (data) => {
+
+    if (!editorRef.current || !monacoRef.current) return;
+
+    decorationsRef.current =
+      editorRef.current.deltaDecorations(
+        decorationsRef.current,
+        [
+          {
+            range: new monacoRef.current.Range(
+              data.line,
+              data.column,
+              data.line,
+              data.column + 1
+            ),
+            options: {
+  className: "remoteCursor",
+  afterContentClassName: "cursorLabel",
+  hoverMessage: {
+    value: `👤 ${data.userName}`,
+  },
+  glyphMarginClassName: "cursorGlyph",
+}
+          },
+        ]
+      );
+
+  });
+
+  return () => {
+    socket.off("receive-cursor");
   };
 
+  
 
+}, []);
 
 
 
@@ -270,33 +360,52 @@ useEffect(() => {
       >
         <select
           value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-        >
+onChange={(e) => {
+  const newLanguage = e.target.value;
+
+  setLanguage(newLanguage);
+
+  if (onLanguageChange) {
+    onLanguageChange(newLanguage);
+  }
+}}        >
           <option value="javascript">JavaScript</option>
           <option value="java">Java</option>
           <option value="python">Python</option>
           <option value="cpp">C++</option>
         </select>
 
-        <button
-          onClick={runCode}
-          style={{
-            padding: "8px 20px",
-            cursor: "pointer",
-          }}
-        >
-          ▶ Run Code
-        </button>
+  <button
+  onClick={runCode}
+  style={{
+    padding: "8px 20px",
+    cursor: "pointer",
+  }}
+>
+  ▶ Run Code
+</button>
+
+<button
+  onClick={handleFormat}
+  style={{
+    padding: "8px 20px",
+    cursor: "pointer",
+    marginLeft: "10px",
+  }}
+>
+  ✨ Format
+</button>
       </div>
 
       {/* Monaco Editor */}
-      <Editor
-        height="80vh"
-        language={language}
-        theme="vs-dark"
-        value={code}
-        onChange={handleEditorChange}
-      />
+  <Editor
+  height="80vh"
+  language={language}
+  theme="vs-dark"
+  value={code}
+  onMount={handleEditorDidMount}
+  onChange={handleEditorChange}
+/>
 
       {/* Output */}
            <div

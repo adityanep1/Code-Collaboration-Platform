@@ -49,6 +49,20 @@ const FileItem = ({
   return (
     <>
       <div
+        draggable
+       onDragStart={(e) => {
+  console.log("Dragging:", file.fileName);
+
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("itemId", file._id);
+  e.dataTransfer.setData("itemType", file.type);
+}}
+
+  onDragEnd={() => {
+    console.log("Drag End");
+  }}
+
+  
         onContextMenu={handleRightClick}
         className={`flex justify-between items-center p-2 mb-2 rounded-lg border ${
           selectedFileId === file._id
@@ -63,7 +77,6 @@ const FileItem = ({
           {file.type === "folder" ? "📁" : "📄"} {file.fileName}
         </div>
 
-        {/* Keep these buttons for now */}
         <div className="flex gap-2">
           <button
             onClick={() => renameFile(file)}

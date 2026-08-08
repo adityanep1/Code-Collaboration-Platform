@@ -37,13 +37,15 @@ const getHistory = async (req, res) => {
       history,
     });
   } catch (error) {
-    console.log(error);
+  console.error("===== EXECUTION ERROR =====");
+  console.error(error);
 
-    res.status(500).json({
-      success: false,
-      message: "Unable to fetch history",
-    });
-  }
+  res.status(500).json({
+    success: false,
+    message: error.message,
+    stack: error.stack,
+  });
+}
 };
 
 module.exports = {

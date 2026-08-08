@@ -4,13 +4,30 @@ module.exports = (io) => {
 
   io.on("connection", (socket) => {
 
+    socket.on("whiteboard-draw", (data) => {
+  socket.to(data.roomCode).emit(
+    "whiteboard-draw",
+    data
+  );
+});
+
+socket.on("whiteboard-clear", (data) => {
+  socket.to(data.roomCode).emit(
+    "whiteboard-clear"
+  );
+});
+
     console.log("🟢 User Connected:", socket.id);
 
     // ===========================
     // JOIN ROOM
     // ===========================
     socket.on("join-room", ({ roomCode, userName }) => {
-
+      socket.on("peer-id", ({ roomCode, peerId }) => {
+  socket.to(roomCode).emit("peer-user", {
+    peerId,
+  });
+});
       console.log("========== JOIN ROOM ==========");
       console.log("Room Code:", roomCode);
       console.log("User Name:", userName);
@@ -75,7 +92,7 @@ socket.on("cursor-change", (data) => {
   socket.to(data.roomCode).emit("receive-cursor", data);
 });
 
-    // ===========================
+// ===========================
 // CHAT MESSAGE
 // ===========================
 socket.on("send-message", ({ roomCode, message, userName }) => {
@@ -86,6 +103,52 @@ socket.on("send-message", ({ roomCode, message, userName }) => {
     time: new Date().toLocaleTimeString(),
   });
 
+});
+
+// ===========================
+// EXECUTION SAVED
+// ===========================
+socket.on("execution-saved", ({ roomCode }) => {
+
+  io.to(roomCode).emit("refresh-history");
+
+});
+
+// ===========================
+// VIDEO CALL SIGNALING
+// ===========================
+
+socket.on("video-offer", ({ roomCode, signal }) => {
+  socket.to(roomCode).emit("video-offer", {
+    signal,
+    callerId: socket.id,
+  });
+});
+
+socket.on("video-answer", ({ roomCode, signal }) => {
+  socket.to(roomCode).emit("video-answer", {
+    signal,
+  });
+});
+
+socket.on("ice-candidate", ({ roomCode, candidate }) => {
+  socket.to(roomCode).emit("ice-candidate", {
+    candidate,
+  });
+});
+
+// ===========================
+// WHITEBOARD DRAW
+// ===========================
+socket.on("draw", (data) => {
+  socket.to(data.roomCode).emit("draw", data);
+});
+
+// ===========================
+// CLEAR WHITEBOARD
+// ===========================
+socket.on("clear-board", ({ roomCode }) => {
+  socket.to(roomCode).emit("clear-board");
 });
 
     // ===========================

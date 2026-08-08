@@ -69,9 +69,10 @@ const alreadyJoined = room.members.some(
 );
 
 if (alreadyJoined) {
-  return res.status(400).json({
-    success: false,
-    message: "You are already in this room.",
+  return res.status(200).json({
+    success: true,
+    message: "Already a member.",
+    room,
   });
 }
 

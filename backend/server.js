@@ -5,11 +5,15 @@ const { Server } = require("socket.io");
 
 const app = require("./app");
 const connectDB = require("./config/db");
+const aiRoutes = require("./routes/aiRoutes");
 
 const PORT = process.env.PORT || 5000;
 
 // Connect MongoDB
 connectDB();
+
+// Use AI Routes
+app.use("/api/ai", aiRoutes);
 
 // Create HTTP Server
 const server = http.createServer(app);
