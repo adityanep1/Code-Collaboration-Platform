@@ -1,8 +1,18 @@
 import { useState } from "react";
-import FileItem from "./FileItem";
 import { useParams } from "react-router-dom";
+
 import socket from "../socket/socket";
 import { moveFileAPI } from "../services/fileService";
+
+import FileItem from "./FileItem";
+import {
+  FaChevronRight,
+  FaChevronDown,
+  FaFolder,
+  FaFolderOpen,
+  FaPen,
+  FaTrash,
+} from "react-icons/fa";
 
 const FolderItem = ({
   folder,
@@ -15,130 +25,347 @@ const FolderItem = ({
   renameFile,
   deleteFile,
 }) => {
+  const [expanded, setExpanded] =
+    useState(true);
 
-  const [expanded, setExpanded] = useState(true);
   const { roomCode } = useParams();
 
-const children = files.filter(
-  (file) => String(file.parentId) === String(folder._id)
-);
+  // =========================================
+  // CHILDREN
+  // =========================================
 
-  return (
-    <div className="mb-3">
+  const children = files.filter(
+    (file) =>
+      String(file.parentId) ===
+      String(folder._id)
+  );
 
-      {/* Folder */}
+  // =========================================
+  // TOGGLE FOLDER
+  // =========================================
 
-<div className="flex justify-between items-center w-full">
-  <div
-  onDragOver={(e) => e.preventDefault()}
+  const handleFolderClick = () => {
+    setExpanded(
+      (previous) => !previous
+    );
 
-  onDrop={async (e) => {
+    setSelectedFolder(
+      folder._id
+    );
+  };
 
-    e.preventDefault();
+  // =========================================
+  // DROP FILE INTO FOLDER
+  // =========================================
 
-    const itemId = e.dataTransfer.getData("itemId");
+  const handleDrop = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
 
-    if (!itemId) return;
+    const itemId =
+      event.dataTransfer.getData(
+        "itemId"
+      );
 
-    try {
-
-      await moveFileAPI(itemId, folder._id);
-
-      socket.emit("file-created", {
-        roomCode,
-      });
-
-    } catch (error) {
-
-      console.log(error);
-
+    if (!itemId) {
+      return;
     }
 
-  }}
+    // Don't move folder into itself
+    if (
+      String(itemId) ===
+      String(folder._id)
+    ) {
+      return;
+    }
 
-  onClick={() => {
-    setExpanded(!expanded);
-    setSelectedFolder(folder._id);
-  }}
+    try {
+      await moveFileAPI(
+        itemId,
+        folder._id
+      );
 
-  className="flex-1 cursor-pointer"
->
-    {expanded ? "📂" : "📁"} {folder.fileName}
-  </div>
+      socket.emit(
+        "file-created",
+        {
+          roomCode,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Move file error:",
+        error
+      );
+    }
+  };
 
-  <div className="flex gap-2">
+  // =========================================
+  // DRAG OVER
+  // =========================================
 
-    <button
-      onClick={() => renameFile(folder)}
-      className="text-blue-600"
-    >
-      ✏
-    </button>
+  const handleDragOver = (event) => {
+    event.preventDefault();
 
-    <button
-      onClick={() => deleteFile(folder)}
-      className="text-red-600"
-    >
-      🗑
-    </button>
+    event.dataTransfer.dropEffect =
+      "move";
+  };
 
-  </div>
+  return (
+    <div className="w-full">
 
-</div>
+      {/* =====================================
+          FOLDER ROW
+      ====================================== */}
 
-      {/* Files */}
+      <div
+        onClick={
+          handleFolderClick
+        }
+        onDrop={handleDrop}
+        onDragOver={
+          handleDragOver
+        }
+        className="
+          group
+          w-full
+          min-w-0
+          h-9
+          flex
+          items-center
+          gap-2
+          rounded-md
+          px-2
+          mb-1
+          cursor-pointer
+          text-slate-700
+          hover:bg-slate-50
+          border
+          border-transparent
+          hover:border-slate-200
+          transition-colors
+        "
+      >
 
-      {expanded && (
+        {/* ===================================
+            ARROW
+        ==================================== */}
 
-        <div className="ml-6 mt-2">
+        <span
+          className="
+            shrink-0
+            w-3
+            flex
+            items-center
+            justify-center
+            text-slate-400
+          "
+        >
+          {expanded ? (
+            <FaChevronDown className="text-[8px]" />
+          ) : (
+            <FaChevronRight className="text-[8px]" />
+          )}
+        </span>
 
-      {children.length === 0 ? (
+        {/* ===================================
+            FOLDER ICON
+        ==================================== */}
 
-  <p className="text-gray-400 text-sm">
-    Empty Folder
-  </p>
+        {expanded ? (
+          <FaFolderOpen
+            className="
+              shrink-0
+              text-sm
+              text-amber-500
+            "
+          />
+        ) : (
+          <FaFolder
+            className="
+              shrink-0
+              text-sm
+              text-amber-500
+            "
+          />
+        )}
 
-) : (
+        {/* ===================================
+            FOLDER NAME
+        ==================================== */}
 
-  children.map((item) =>
+        <span
+          className="
+            flex-1
+            min-w-0
+            truncate
+            text-xs
+            font-medium
+          "
+          title={folder.fileName}
+        >
+          {folder.fileName}
+        </span>
 
-    item.type === "folder" ? (
+        {/* ===================================
+            ACTIONS
+        ==================================== */}
 
-      <FolderItem
-        key={item._id}
-        folder={item}
-        files={files}
-        selectedFileId={selectedFileId}
-        openTabs={openTabs}
-        setOpenTabs={setOpenTabs}
-        setSelectedFileId={setSelectedFileId}
-        setSelectedFolder={setSelectedFolder}
-        renameFile={renameFile}
-        deleteFile={deleteFile}
-      />
+        <div
+          className="
+            shrink-0
+            flex
+            items-center
+            gap-1
+            opacity-0
+            group-hover:opacity-100
+            transition-opacity
+          "
+          onClick={(event) =>
+            event.stopPropagation()
+          }
+        >
 
-    ) : (
+          {/* Rename */}
 
-      <FileItem
-        key={item._id}
-        file={item}
-        selectedFileId={selectedFileId}
-        openTabs={openTabs}
-        setOpenTabs={setOpenTabs}
-        setSelectedFileId={setSelectedFileId}
-        setSelectedFolder={setSelectedFolder}
-        renameFile={renameFile}
-        deleteFile={deleteFile}
-      />
+          <button
+            type="button"
+            onClick={() =>
+              renameFile(folder)
+            }
+            className="
+              w-6
+              h-6
+              flex
+              items-center
+              justify-center
+              rounded
+              text-slate-400
+              hover:text-blue-600
+              hover:bg-blue-50
+              transition-colors
+            "
+            title="Rename folder"
+          >
+            <FaPen className="text-[9px]" />
+          </button>
 
-    )
+          {/* Delete */}
 
-  )
-
-)}
+          <button
+            type="button"
+            onClick={() =>
+              deleteFile(folder)
+            }
+            className="
+              w-6
+              h-6
+              flex
+              items-center
+              justify-center
+              rounded
+              text-slate-400
+              hover:text-red-600
+              hover:bg-red-50
+              transition-colors
+            "
+            title="Delete folder"
+          >
+            <FaTrash className="text-[9px]" />
+          </button>
 
         </div>
 
+      </div>
+
+      {/* =====================================
+          CHILDREN
+      ====================================== */}
+
+      {expanded && (
+        <div
+          className="
+            ml-4
+            pl-2
+            border-l
+            border-slate-200
+            mb-1
+          "
+        >
+
+          {children.length === 0 ? (
+            <div
+              className="
+                h-7
+                flex
+                items-center
+                px-2
+                text-[11px]
+                text-slate-400
+              "
+            >
+              Empty folder
+            </div>
+          ) : (
+            children.map((item) =>
+              item.type ===
+              "folder" ? (
+                <FolderItem
+                  key={item._id}
+                  folder={item}
+                  files={files}
+                  selectedFileId={
+                    selectedFileId
+                  }
+                  openTabs={
+                    openTabs
+                  }
+                  setOpenTabs={
+                    setOpenTabs
+                  }
+                  setSelectedFileId={
+                    setSelectedFileId
+                  }
+                  setSelectedFolder={
+                    setSelectedFolder
+                  }
+                  renameFile={
+                    renameFile
+                  }
+                  deleteFile={
+                    deleteFile
+                  }
+                />
+              ) : (
+                <FileItem
+                  key={item._id}
+                  file={item}
+                  selectedFileId={
+                    selectedFileId
+                  }
+                  openTabs={
+                    openTabs
+                  }
+                  setOpenTabs={
+                    setOpenTabs
+                  }
+                  setSelectedFileId={
+                    setSelectedFileId
+                  }
+                  setSelectedFolder={
+                    setSelectedFolder
+                  }
+                  renameFile={
+                    renameFile
+                  }
+                  deleteFile={
+                    deleteFile
+                  }
+                />
+              )
+            )
+          )}
+
+        </div>
       )}
 
     </div>
